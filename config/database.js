@@ -5,9 +5,9 @@ const connectDB = async () => {
   try {
     // اتصل بـ MongoDB باستخدام الـ URI من ملف .env
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ تم الاتصال بقاعدة البيانات بنجاح!');
+    console.log('✅ Successfully connected to the database!');
   } catch (error) {
-    console.error('❌ خطأ في الاتصال بقاعدة البيانات:', error.message);
+    console.error('❌ Database connection error: ', error.message);
     process.exit(1); // إيقاف البرنامج إذا فشل الاتصال
   }
 };
