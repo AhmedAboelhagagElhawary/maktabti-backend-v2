@@ -52,15 +52,6 @@ const userSchema = new mongoose.Schema(
     academicMajor: {
       type: String,
       required: [true, 'التخصص الأكاديمي مطلوب'],
-      enum: [
-        'General',
-        'الذكاء الاصطناعي',
-        'تطوير الويب',
-        'تطبيقات الموبايل',
-        'الأمن السيبراني',
-        'قواعد البيانات',
-        'هندسة البرمجيات'
-      ]
     },
 
     // السنة الدراسية

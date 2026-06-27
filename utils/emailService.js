@@ -30,7 +30,7 @@ const sendOtpEmail = async (email, otp) => {
               <p style="color: #a0aabf; font-size: 14px;">هذا الكود صالح لمدة <b>10 دقائق</b> فقط. يرجى عدم مشاركته مع أي شخص.</p>
               
               <hr style="border: none; border-top: 1px solid #2a2f45; margin: 40px 0 20px 0;">
-              <p style="color: #677189; font-size: 12px; margin: 0;">© 2024 مكتبتي - جميع الحقوق محفوظة.</p>
+              <p style="color: #677189; font-size: 12px; margin: 0;">© 2026 مكتبتي - جميع الحقوق محفوظة.</p>
             </div>
           </div>
         `
@@ -76,7 +76,7 @@ const sendPasswordResetEmail = async (email, otp) => {
               <p style="color: #a0aabf; font-size: 14px;">هذا الكود صالح لمدة <b>10 دقائق</b> فقط. إذا لم تقم بهذا الطلب، يمكنك تجاهل هذه الرسالة.</p>
               
               <hr style="border: none; border-top: 1px solid #2a2f45; margin: 40px 0 20px 0;">
-              <p style="color: #677189; font-size: 12px; margin: 0;">© 2024 مكتبتي - جميع الحقوق محفوظة.</p>
+              <p style="color: #677189; font-size: 12px; margin: 0;">© 2026 مكتبتي - جميع الحقوق محفوظة.</p>
             </div>
           </div>
         `

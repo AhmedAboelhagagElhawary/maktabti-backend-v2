@@ -21,14 +21,6 @@ const projectSchema = new mongoose.Schema(
     specialization: {
       type: String,
       required: [true, 'التخصص مطلوب'],
-      enum: [
-        'الذكاء الاصطناعي',
-        'تطوير الويب',
-        'تطبيقات الموبايل',
-        'الأمن السيبراني',
-        'قواعد البيانات',
-        'هندسة البرمجيات'
-      ]
     },
 
     // أعضاء الفريق (علاقة مع User)
