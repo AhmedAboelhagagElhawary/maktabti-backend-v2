@@ -1,20 +1,28 @@
 const express = require('express');
-const { signup, login, getMe } = require('../controllers/authController');
+const {
+  signup,
+  login,
+  getMe,
+  verifyOtp,
+  resendOtp,
+  forgotPassword,
+  resetPassword
+} = require('../controllers/authController');
 const { protect } = require('../middlewares/auth');
 
 const router = express.Router();
 
-// Route للتسجيل الجديد
-// POST /api/auth/signup
+// Routes للتسجيل والتحقق (بدون حماية)
 router.post('/signup', signup);
+router.post('/verify-otp', verifyOtp);
+router.post('/resend-otp', resendOtp);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Route لتسجيل الدخول
-// POST /api/auth/login
 router.post('/login', login);
 
-// Route للحصول على بيانات المستخدم الحالي
-// GET /api/auth/me
-// يحتاج إلى التوكن في الـ Headers
+// Route للحصول على بيانات المستخدم الحالي (محمية)
 router.get('/me', protect, getMe);
 
 module.exports = router;

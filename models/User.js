@@ -87,6 +87,26 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+
+    // التحقق من البريد الإلكتروني
+    isEmailVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    // كود OTP مؤقت
+    otp: {
+      type: String,
+      sparse: true,
+      select: false
+    },
+
+    // انتهاء صلاحية OTP (بعد 10 دقائق)
+    otpExpiry: {
+      type: Date,
+      sparse: true,
+      select: false
     }
   },
   { 
