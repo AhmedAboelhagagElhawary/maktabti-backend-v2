@@ -103,11 +103,16 @@ const userSchema = new mongoose.Schema(
       type: Date,
       sparse: true,
       select: false
+    },
+    isSuperAdmin: {
+      type: Boolean,
+      default: false
     }
   },
   { 
     timestamps: true
-  }
+  },
+  
 );
 
 module.exports = mongoose.model('User', userSchema);

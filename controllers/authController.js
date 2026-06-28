@@ -136,7 +136,7 @@ const verifyOtp = async (req, res) => {
     await user.save();
 
     // إنشاء التوكن
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id, user.role, user.isSuperAdmin);
 
     return res.status(200).json({
       success: true,
@@ -267,7 +267,7 @@ const login = async (req, res) => {
     }
 
     // 6. إنشاء التوكن
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id, user.role, user.isSuperAdmin);
 
     // 7. ✅ تحقق من isFirstLogin
     if (user.isFirstLogin && user.role === 'admin') {
@@ -631,5 +631,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   createAdminAccount,
-  changePassword 
+  changePassword
 };

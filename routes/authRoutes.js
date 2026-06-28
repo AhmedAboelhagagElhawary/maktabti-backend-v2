@@ -10,7 +10,7 @@ const {
   createAdminAccount,
   changePassword  // ✅ تأكد موجودة
 } = require('../controllers/authController');
-const { protect, authorize } = require('../middlewares/auth');
+const { protect, authorize, authorizeSuperAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -27,6 +27,6 @@ router.get('/me', protect, getMe);
 router.post('/change-password', protect, changePassword);  // ✅ صحيح
 
 // Route خاص لـ Super Admin
-router.post('/admin/create', protect, authorize('admin'), createAdminAccount);
+router.post('/admin/create', protect, authorizeSuperAdmin, createAdminAccount);
 
 module.exports = router;

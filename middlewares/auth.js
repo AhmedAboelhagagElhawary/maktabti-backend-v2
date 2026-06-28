@@ -51,5 +51,23 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+const authorizeSuperAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: '❌ أنت لا تملك صلاحيات Super Admin'
+    });
+  }
+
+  if (!req.user.isSuperAdmin) {
+    return res.status(403).json({
+      success: false,
+      message: '❌ فقط Super Admin يقدر ينشئ Admin جديد'
+    });
+  }
+
+  next();
+};
+
+module.exports = { protect, authorize, authorizeSuperAdmin};
 //module.exports = { protect };

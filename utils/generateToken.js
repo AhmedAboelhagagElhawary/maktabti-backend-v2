@@ -1,11 +1,17 @@
 const jwt = require('jsonwebtoken');
 
-const generateToken = (userId, role) => {
+const generateToken = (userId, role, isSuperAdmin = false) => {
   return jwt.sign(
-    { id: userId, role: role }, // البيانات المحفوظة في التوكن
-    process.env.JWT_SECRET,       // المفتاح السري
-    { expiresIn: '30d' }          // انتهاء الصلاحية بعد 30 يوم
+    { 
+      id: userId, 
+      role,
+      isSuperAdmin
+    }, 
+    process.env.JWT_SECRET, 
+    {
+      expiresIn: '7d'
+    }
   );
 };
 
-module.exports = generateToken;
+module.exports = generateToken;  // ✅ مهم جداً!
