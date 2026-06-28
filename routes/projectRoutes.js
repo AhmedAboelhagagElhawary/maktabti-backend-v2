@@ -5,30 +5,33 @@ const {
   createProject,
   updateProject,
   deleteProject,
-  updateProjectStatus  // تأكد أنها هنا
+  updateProjectStatus
 } = require('../controllers/projectController');
 const { protect, authorize } = require('../middlewares/auth');
+const upload = require('../middlewares/fileUpload');
 
 const router = express.Router();
 
-// Routes للجميع
-// GET /api/projects - جلب جميع المشاريع
+// GET routes (public)
 router.get('/', getAllProjects);
-
-// GET /api/projects/:id - جلب مشروع واحد
 router.get('/:id', getProjectById);
 
-// Routes محمية (يجب تسجيل دخول)
-// POST /api/projects - إنشاء مشروع جديد (طالب أو admin)
-router.post('/', protect, createProject);
+// POST route - create project WITH files upload
+router.post('/', protect, upload.fields([
+  { name: 'documentationPdf', maxCount: 1 },
+  { name: 'projectBanner', maxCount: 1 }
+]), createProject);
 
-// PUT /api/projects/:id - تحديث مشروع (منشئ أو admin)
-router.put('/:id', protect, updateProject);
+// PUT route - update project
+router.put('/:id', protect, upload.fields([
+  { name: 'documentationPdf', maxCount: 1 },
+  { name: 'projectBanner', maxCount: 1 }
+]), updateProject);
 
-// DELETE /api/projects/:id - حذف مشروع (منشئ أو admin)
+// DELETE route
 router.delete('/:id', protect, deleteProject);
 
-// PATCH /api/projects/:id/status - تغيير حالة المشروع (Admin فقط)
+// PATCH - Update Status (Admin only)
 router.patch('/:id/status', protect, authorize('admin'), updateProjectStatus);
 
 module.exports = router;

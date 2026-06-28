@@ -7,24 +7,20 @@ const {
   deleteExam
 } = require('../controllers/examController');
 const { protect, authorize } = require('../middlewares/auth');
+const upload = require('../middlewares/fileUpload');
 
 const router = express.Router();
 
-// Routes للجميع (بدون حماية)
-// GET /api/exams - جلب جميع الامتحانات السابقة
 router.get('/', getAllExams);
-
-// GET /api/exams/:id - جلب امتحان سابق واحد
 router.get('/:id', getExamById);
-
-// Routes للـ Admin فقط (محمية)
-// POST /api/exams - إضافة امتحان سابق جديد
-router.post('/', protect, authorize('admin'), createExam);
-
-// PUT /api/exams/:id - تحديث امتحان سابق
-router.put('/:id', protect, authorize('admin'), updateExam);
-
-// DELETE /api/exams/:id - حذف امتحان سابق
+router.post('/', protect, authorize('admin'), upload.fields([
+  { name: 'examPdf', maxCount: 1 },
+  { name: 'solutionPdf', maxCount: 1 }
+]), createExam);
+router.put('/:id', protect, authorize('admin'), upload.fields([
+  { name: 'examPdf', maxCount: 1 },
+  { name: 'solutionPdf', maxCount: 1 }
+]), updateExam);
 router.delete('/:id', protect, authorize('admin'), deleteExam);
 
 module.exports = router;

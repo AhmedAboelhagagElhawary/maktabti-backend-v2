@@ -2,22 +2,21 @@ const mongoose = require('mongoose');
 
 const bookSchema = new mongoose.Schema(
   {
-    // عنوان الكتاب
+    // اسم الكتاب
     title: {
       type: String,
-      required: [true, 'عنوان الكتاب مطلوب'],
+      required: [true, 'اسم الكتاب مطلوب'],
       trim: true,
-      minlength: [3, 'العنوان يجب أن يكون 3 أحرف على الأقل']
+      minlength: [3, 'الاسم يجب أن يكون 3 أحرف على الأقل']
     },
 
-    // مؤلف الكتاب
+    // المؤلف
     author: {
       type: String,
-      required: [true, 'اسم المؤلف مطلوب'],
-      trim: true
+      required: [true, 'اسم المؤلف مطلوب']
     },
 
-    // القسم (العلاقة مع Category)
+    // القسم/التصنيف
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',
@@ -27,7 +26,7 @@ const bookSchema = new mongoose.Schema(
     // الوصف
     description: {
       type: String,
-      maxlength: [1000, 'الوصف يجب ألا يتجاوز 1000 حرف']
+      required: [true, 'وصف الكتاب مطلوب']
     },
 
     // حالة التوفر
@@ -37,18 +36,18 @@ const bookSchema = new mongoose.Schema(
       default: 'متوفر'
     },
 
-    // عدد النسخ المتاحة
+    // إجمالي النسخ
     totalCopies: {
       type: Number,
-      required: [true, 'عدد النسخ مطلوب'],
+      required: [true, 'عدد النسخ المطلوب'],
       min: [1, 'يجب أن يكون هناك نسخة واحدة على الأقل']
     },
 
-    // عدد النسخ المتاحة حالياً
+    // النسخ المتاحة
     availableCopies: {
       type: Number,
       required: true,
-      min: [0, 'لا يمكن أن تكون سالبة']
+      min: [0, 'عدد النسخ المتاحة لا يمكن أن يكون سالباً']
     },
 
     // سنة النشر
@@ -57,23 +56,23 @@ const bookSchema = new mongoose.Schema(
       required: [true, 'سنة النشر مطلوبة']
     },
 
-    // رابط الصورة (الغلاف)
+    // صورة الغلاف (Cover Image)
     coverImageUrl: {
       type: String,
       sparse: true
     },
 
-    // رابط الـ PDF (اختياري)
+    // ملف PDF للكتاب
     pdfUrl: {
       type: String,
       sparse: true
     },
 
-    // تقييم الكتاب (اختياري)
+    // التقييم
     rating: {
       type: Number,
       min: [0, 'التقييم لا يمكن أن يكون أقل من 0'],
-      max: [5, 'التقييم لا يمكن أن يكون أكثر من 5'],
+      max: [5, 'التقييم لا يمكن أن يتجاوز 5'],
       default: 0
     }
   },

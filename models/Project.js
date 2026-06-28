@@ -50,9 +50,9 @@ const projectSchema = new mongoose.Schema(
       type: String,
       sparse: true,
       match: [
-        /^(https?:\/\/)?(www\.)?github\.com\/.+$/,
-        'الرجاء إدخال رابط GitHub صحيح'
-      ]
+        /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/,
+        'الرجاء إدخال رابط GitHub صحيح (مثال: https://github.com/username/repo)'
+        ] 
     },
 
     // رابط ملف التوثيق (PDF)

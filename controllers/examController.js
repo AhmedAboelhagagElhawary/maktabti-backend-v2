@@ -1,25 +1,10 @@
 const Exam = require('../models/Exam');
+const { uploadPDF } = require('../utils/uploadService');
 
-// الحصول على جميع الامتحانات السابقة
+// GET جميع الامتحانات
 const getAllExams = async (req, res) => {
   try {
-    const { specialization, examType, academicYear, semester } = req.query;
-
-    let query = {};
-    if (specialization) query.specialization = specialization;
-    if (examType) query.examType = examType;
-    if (academicYear) query.academicYear = academicYear;
-    if (semester) query.semester = semester;
-
-    const exams = await Exam.find(query).sort({ examDate: -1 });
-
-    if (exams.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: 'لا توجد امتحانات سابقة متاحة حالياً',
-        exams: []
-      });
-    }
+    const exams = await Exam.find().sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -36,7 +21,7 @@ const getAllExams = async (req, res) => {
   }
 };
 
-// الحصول على امتحان واحد
+// GET امتحان واحد
 const getExamById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -68,7 +53,7 @@ const getExamById = async (req, res) => {
   }
 };
 
-// إنشاء امتحان سابق جديد (Admin فقط)
+// POST إنشاء امتحان جديد (مع PDF upload)
 const createExam = async (req, res) => {
   try {
     const {
@@ -79,33 +64,62 @@ const createExam = async (req, res) => {
       semester,
       specialization,
       instructor,
-      examDate,
-      examPdfUrl,
-      solutionPdfUrl
+      examDate
     } = req.body;
 
     // التحقق من الحقول المطلوبة
-    if (!courseName || !courseCode || !examType || !academicYear || !semester || 
-        !specialization || !examDate || !examPdfUrl) {
+    if (!courseName || !courseCode || !examDate) {
       return res.status(400).json({
         success: false,
-        message: 'الرجاء ملء جميع الحقول المطلوبة'
+        message: 'الحقول المطلوبة: courseName, courseCode, examDate'
       });
     }
 
-    // التحقق من أن رمز المادة فريد
-    const existingExam = await Exam.findOne({ courseCode });
-    if (existingExam) {
-      return res.status(409).json({
+    // متغيرات لتخزين الـ URLs
+    let examPdfUrl = null;
+    let solutionPdfUrl = null;
+
+    // Upload ملف الامتحان (مطلوب)
+    if (req.files && req.files.examPdf) {
+      try {
+        const uploadResult = await uploadPDF(
+          req.files.examPdf[0].buffer,
+          `exam-pdf-${Date.now()}-${req.files.examPdf[0].originalname}`
+        );
+        examPdfUrl = uploadResult.secure_url;
+      } catch (error) {
+        console.error('❌ Exam PDF upload failed:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'فشل رفع ملف الامتحان',
+          error: error.message
+        });
+      }
+    } else {
+      return res.status(400).json({
         success: false,
-        message: 'رمز المادة موجود بالفعل'
+        message: 'ملف الامتحان مطلوب'
       });
+    }
+
+    // Upload ملف الحل (اختياري)
+    if (req.files && req.files.solutionPdf) {
+      try {
+        const uploadResult = await uploadPDF(
+          req.files.solutionPdf[0].buffer,
+          `exam-solution-${Date.now()}-${req.files.solutionPdf[0].originalname}`
+        );
+        solutionPdfUrl = uploadResult.secure_url;
+      } catch (error) {
+        console.error('❌ Solution PDF upload failed:', error);
+        // لا نوقف العملية إذا فشل الحل (هو اختياري)
+      }
     }
 
     // إنشاء الامتحان
     const newExam = await Exam.create({
       courseName,
-      courseCode,
+      courseCode: courseCode.toUpperCase(),
       examType,
       academicYear,
       semester,
@@ -118,7 +132,7 @@ const createExam = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'تم إضافة الامتحان السابق بنجاح',
+      message: 'تم إنشاء الامتحان بنجاح',
       exam: newExam
     });
 
@@ -131,13 +145,23 @@ const createExam = async (req, res) => {
   }
 };
 
-// تحديث امتحان (Admin فقط)
+// PUT تحديث امتحان
 const updateExam = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const {
+      courseName,
+      courseCode,
+      examType,
+      academicYear,
+      semester,
+      specialization,
+      instructor,
+      examDate
+    } = req.body;
 
     const exam = await Exam.findById(id);
+
     if (!exam) {
       return res.status(404).json({
         success: false,
@@ -145,17 +169,40 @@ const updateExam = async (req, res) => {
       });
     }
 
-    // تحديث الامتحان
-    const updatedExam = await Exam.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    // تحديث البيانات
+    if (courseName) exam.courseName = courseName;
+    if (courseCode) exam.courseCode = courseCode.toUpperCase();
+    if (examType) exam.examType = examType;
+    if (academicYear) exam.academicYear = academicYear;
+    if (semester) exam.semester = semester;
+    if (specialization) exam.specialization = specialization;
+    if (instructor) exam.instructor = instructor;
+    if (examDate) exam.examDate = examDate;
+
+    // تحديث ملف الامتحان إذا وجد
+    if (req.files && req.files.examPdf) {
+      const uploadResult = await uploadPDF(
+        req.files.examPdf[0].buffer,
+        `exam-pdf-update-${Date.now()}`
+      );
+      exam.examPdfUrl = uploadResult.secure_url;
+    }
+
+    // تحديث ملف الحل إذا وجد
+    if (req.files && req.files.solutionPdf) {
+      const uploadResult = await uploadPDF(
+        req.files.solutionPdf[0].buffer,
+        `exam-solution-update-${Date.now()}`
+      );
+      exam.solutionPdfUrl = uploadResult.secure_url;
+    }
+
+    await exam.save();
 
     return res.status(200).json({
       success: true,
       message: 'تم تحديث الامتحان بنجاح',
-      exam: updatedExam
+      exam
     });
 
   } catch (error) {
@@ -167,12 +214,13 @@ const updateExam = async (req, res) => {
   }
 };
 
-// حذف امتحان (Admin فقط)
+// DELETE حذف امتحان
 const deleteExam = async (req, res) => {
   try {
     const { id } = req.params;
 
     const exam = await Exam.findById(id);
+
     if (!exam) {
       return res.status(404).json({
         success: false,

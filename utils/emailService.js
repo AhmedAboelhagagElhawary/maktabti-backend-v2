@@ -3,8 +3,8 @@ const sendOtpEmail = async (email, otp) => {
     // طباعة OTP في Terminal فقط
     console.log(`\n${'='.repeat(50)}`);
     console.log(`📧 OTP for: ${email}`);
-    // console.log(`🔐 Code: ${otp}`);
-    // console.log(`⏰ Expires in: 10 minutes`);
+    //console.log(`🔐 Code: ${otp}`);
+    //console.log(`⏰ Expires in: 10 minutes`);
     console.log(`${'='.repeat(50)}\n`);
 
     // محاولة الإرسال (لكن لو فشل ما يؤثر)

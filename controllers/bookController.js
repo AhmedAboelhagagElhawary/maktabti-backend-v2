@@ -1,26 +1,19 @@
 const Book = require('../models/Book');
 const Category = require('../models/Category');
+const { uploadImage, uploadPDF } = require('../utils/uploadService');
 
-// الحصول على جميع الكتب
+// GET جميع الكتب
 const getAllBooks = async (req, res) => {
   try {
-    // يمكن فلترة حسب القسم
     const { categoryId } = req.query;
-    
     let query = {};
+
     if (categoryId) {
       query.category = categoryId;
     }
 
-    const books = await Book.find(query).populate('category', 'name description');
-
-    if (books.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: 'لا توجد كتب حالياً',
-        books: []
-      });
-    }
+    const books = await Book.find(query)
+      .populate('category', 'name description');
 
     return res.status(200).json({
       success: true,
@@ -37,12 +30,13 @@ const getAllBooks = async (req, res) => {
   }
 };
 
-// الحصول على كتاب واحد
+// GET كتاب واحد
 const getBookById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const book = await Book.findById(id).populate('category');
+    const book = await Book.findById(id)
+      .populate('category', 'name description');
 
     if (!book) {
       return res.status(404).json({
@@ -65,73 +59,104 @@ const getBookById = async (req, res) => {
   }
 };
 
-// إنشاء كتاب جديد (Admin فقط)
+// POST إنشاء كتاب جديد (مع صورة و PDF)
+// POST إنشاء كتاب جديد
 const createBook = async (req, res) => {
   try {
     const {
       title,
       author,
-      category,
+      categoryName, // ✅ بدل category ID
       description,
       availabilityStatus,
       totalCopies,
       availableCopies,
       publicationYear,
-      coverImageUrl,
-      pdfUrl,
       rating
     } = req.body;
 
     // التحقق من الحقول المطلوبة
-    if (!title || !author || !category || !totalCopies || !availableCopies) {
+    if (!title || !author || !categoryName || !description || !totalCopies) {
       return res.status(400).json({
         success: false,
-        message: 'الرجاء ملء جميع الحقول المطلوبة'
+        message: 'الحقول المطلوبة: title, author, categoryName, description, totalCopies'
       });
     }
 
-    // التحقق من أن القسم موجود
-    const categoryExists = await Category.findById(category);
-    if (!categoryExists) {
+    // ✅ ابحث عن التصنيف باستخدام الـ name
+    const category = await Category.findOne({ name: categoryName });
+    if (!category) {
       return res.status(404).json({
         success: false,
-        message: 'القسم غير موجود'
+        message: `التصنيف "${categoryName}" غير موجود`,
+        availableCategories: await Category.find({}, 'name -_id')
       });
     }
 
-    // التحقق من أن عدد النسخ المتاحة لا يتجاوز الإجمالي
-    if (availableCopies > totalCopies) {
-      return res.status(400).json({
-        success: false,
-        message: 'عدد النسخ المتاحة لا يمكن أن يتجاوز الإجمالي'
-      });
+    // متغيرات لتخزين الـ URLs
+    let coverImageUrl = null;
+    let pdfUrl = null;
+
+    // Upload صورة الغلاف إذا وجدت
+    if (req.files && req.files.coverImage) {
+      try {
+        const uploadResult = await uploadImage(
+          req.files.coverImage[0].buffer,
+          `book-cover-${Date.now()}-${req.files.coverImage[0].originalname}`
+        );
+        coverImageUrl = uploadResult.secure_url;
+      } catch (error) {
+        console.error('❌ Cover image upload failed:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'فشل رفع صورة الغلاف',
+          error: error.message
+        });
+      }
+    }
+
+    // Upload ملف PDF إذا وجد
+    if (req.files && req.files.bookPdf) {
+      try {
+        const uploadResult = await uploadPDF(
+          req.files.bookPdf[0].buffer,
+          `book-pdf-${Date.now()}-${req.files.bookPdf[0].originalname}`
+        );
+        pdfUrl = uploadResult.secure_url;
+      } catch (error) {
+        console.error('❌ PDF upload failed:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'فشل رفع ملف الكتاب',
+          error: error.message
+        });
+      }
     }
 
     // إنشاء الكتاب
     const newBook = await Book.create({
       title,
       author,
-      category,
+      category: category._id, // ✅ استخدم الـ ID من البحث
       description,
-      availabilityStatus,
+      availabilityStatus: availabilityStatus || 'متوفر',
       totalCopies,
-      availableCopies,
+      availableCopies: availableCopies || totalCopies,
       publicationYear,
       coverImageUrl,
       pdfUrl,
-      rating
+      rating: rating || 0
     });
 
-    // تحديث عدد الكتب في القسم
-    await Category.findByIdAndUpdate(
-      category,
-      { $inc: { booksCount: 1 } }
-    );
+    await newBook.populate('category', 'name description');
+
+    // تحديث عدد الكتب في التصنيف
+    await Category.findByIdAndUpdate(category._id, { $inc: { booksCount: 1 } });
 
     return res.status(201).json({
       success: true,
       message: 'تم إنشاء الكتاب بنجاح',
-      book: await newBook.populate('category')
+      book: newBook
     });
 
   } catch (error) {
@@ -143,13 +168,24 @@ const createBook = async (req, res) => {
   }
 };
 
-// تحديث كتاب (Admin فقط)
+// PUT تحديث كتاب
 const updateBook = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const {
+      title,
+      author,
+      category,
+      description,
+      availabilityStatus,
+      totalCopies,
+      availableCopies,
+      publicationYear,
+      rating
+    } = req.body;
 
     const book = await Book.findById(id);
+
     if (!book) {
       return res.status(404).json({
         success: false,
@@ -157,38 +193,40 @@ const updateBook = async (req, res) => {
       });
     }
 
-    // التحقق من أن القسم صحيح إذا تم تحديثه
-    if (updateData.category) {
-      const categoryExists = await Category.findById(updateData.category);
-      if (!categoryExists) {
-        return res.status(404).json({
-          success: false,
-          message: 'القسم غير موجود'
-        });
-      }
+    // تحديث البيانات
+    if (title) book.title = title;
+    if (author) book.author = author;
+    if (description) book.description = description;
+    if (availabilityStatus) book.availabilityStatus = availabilityStatus;
+    if (totalCopies) book.totalCopies = totalCopies;
+    if (availableCopies !== undefined) book.availableCopies = availableCopies;
+    if (publicationYear) book.publicationYear = publicationYear;
+    if (rating) book.rating = rating;
+
+    // تحديث صورة الغلاف إذا وجدت
+    if (req.files && req.files.coverImage) {
+      const uploadResult = await uploadImage(
+        req.files.coverImage[0].buffer,
+        `book-cover-update-${Date.now()}`
+      );
+      book.coverImageUrl = uploadResult.secure_url;
     }
 
-    // التحقق من أن النسخ صحيحة
-    if (updateData.availableCopies !== undefined && updateData.totalCopies !== undefined) {
-      if (updateData.availableCopies > updateData.totalCopies) {
-        return res.status(400).json({
-          success: false,
-          message: 'عدد النسخ المتاحة لا يمكن أن يتجاوز الإجمالي'
-        });
-      }
+    // تحديث ملف PDF إذا وجد
+    if (req.files && req.files.bookPdf) {
+      const uploadResult = await uploadPDF(
+        req.files.bookPdf[0].buffer,
+        `book-pdf-update-${Date.now()}`
+      );
+      book.pdfUrl = uploadResult.secure_url;
     }
 
-    // تحديث الكتاب
-    const updatedBook = await Book.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('category');
+    await book.save();
 
     return res.status(200).json({
       success: true,
       message: 'تم تحديث الكتاب بنجاح',
-      book: updatedBook
+      book
     });
 
   } catch (error) {
@@ -200,12 +238,13 @@ const updateBook = async (req, res) => {
   }
 };
 
-// حذف كتاب (Admin فقط)
+// DELETE حذف كتاب
 const deleteBook = async (req, res) => {
   try {
     const { id } = req.params;
 
     const book = await Book.findById(id);
+
     if (!book) {
       return res.status(404).json({
         success: false,
@@ -213,13 +252,11 @@ const deleteBook = async (req, res) => {
       });
     }
 
-    // تحديث عدد الكتب في القسم
-    await Category.findByIdAndUpdate(
-      book.category,
-      { $inc: { booksCount: -1 } }
-    );
+    // تحديث عدد الكتب في التصنيف
+    if (book.category) {
+      await Category.findByIdAndUpdate(book.category, { $inc: { booksCount: -1 } });
+    }
 
-    // حذف الكتاب
     await Book.findByIdAndDelete(id);
 
     return res.status(200).json({

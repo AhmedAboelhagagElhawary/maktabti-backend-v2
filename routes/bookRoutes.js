@@ -7,24 +7,27 @@ const {
   deleteBook
 } = require('../controllers/bookController');
 const { protect, authorize } = require('../middlewares/auth');
+const upload = require('../middlewares/fileUpload');
 
 const router = express.Router();
 
-// Routes للجميع
-// GET /api/books - جلب جميع الكتب
+// GET routes (public)
 router.get('/', getAllBooks);
-
-// GET /api/books/:id - جلب كتاب واحد
 router.get('/:id', getBookById);
 
-// Routes للـ Admin فقط
-// POST /api/books - إنشاء كتاب جديد
-router.post('/', protect, authorize('admin'), createBook);
+// POST route - create book WITH files upload (admin only)
+router.post('/', protect, authorize('admin'), upload.fields([
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'bookPdf', maxCount: 1 }
+]), createBook);
 
-// PUT /api/books/:id - تحديث كتاب
-router.put('/:id', protect, authorize('admin'), updateBook);
+// PUT route - update book (admin only)
+router.put('/:id', protect, authorize('admin'), upload.fields([
+  { name: 'coverImage', maxCount: 1 },
+  { name: 'bookPdf', maxCount: 1 }
+]), updateBook);
 
-// DELETE /api/books/:id - حذف كتاب
+// DELETE route (admin only)
 router.delete('/:id', protect, authorize('admin'), deleteBook);
 
 module.exports = router;
