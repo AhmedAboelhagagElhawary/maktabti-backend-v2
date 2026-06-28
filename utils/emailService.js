@@ -91,7 +91,83 @@ const sendPasswordResetEmail = async (email, otp) => {
   }
 };
 
+// إرسال بيانات Admin
+const sendAdminCredentialsEmail = async (email, tempPassword, adminName) => {
+  try {
+    // console.log(`\n📧 Admin Credentials for: ${email}`);
+    // console.log(`   Temp Password: ${tempPassword}\n`);
+
+    try {
+      const sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      
+      await sgMail.send({
+        to: email,
+        from: 'aboelhagagahmed3@gmail.com',
+        subject: '🔐 بيانات دخول Admin - مكتبتي',
+        html: `
+          <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0; color: white; text-align: center;">
+              <h1>👨‍💼 مرحباً ${adminName}</h1>
+              <p>تم تعيينك كمسؤول في النظام</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+              <h2 style="color: #333;">بيانات الدخول الخاصة بك:</h2>
+              
+              <div style="background: white; border: 2px solid #667eea; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #666; margin: 10px 0;">
+                  <strong>📧 البريد الإلكتروني:</strong><br>
+                  ${email}
+                </p>
+                <p style="color: #666; margin: 10px 0;">
+                  <strong>🔑 كلمة المرور المؤقتة:</strong><br>
+                  <code style="background: #f0f0f0; padding: 10px; border-radius: 4px; display: inline-block; font-size: 16px; letter-spacing: 2px;">
+                    ${tempPassword}
+                  </code>
+                </p>
+              </div>
+              
+              <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                <p style="color: #856404; margin: 0;">
+                  ⚠️ <strong>تنبيه أمني:</strong> يجب عليك تغيير كلمة المرور عند أول تسجيل دخول
+                </p>
+              </div>
+              
+              <h3 style="color: #333; margin-top: 30px;">خطوات تسجيل الدخول:</h3>
+              <ol style="color: #666; line-height: 1.8;">
+                <li>ادخل على تطبيق مكتبتي</li>
+                <li>اختر تسجيل الدخول</li>
+                <li>استخدم البريد أعلاه</li>
+                <li>أدخل كلمة المرور المؤقتة</li>
+                <li>غير كلمة المرور إلى كلمة قوية من اختيارك</li>
+              </ol>
+              
+              <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                <p style="color: #2e7d32; margin: 0;">
+                  ✅ <strong>مرحباً في فريق الإدارة!</strong> يمكنك الآن إدارة الكتب والامتحانات والمشاريع
+                </p>
+              </div>
+              
+              <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                © 2026 مكتبتي - Maktabti | جميع الحقوق محفوظة
+              </p>
+            </div>
+          </div>
+        `
+      });
+      console.log('✅ Admin credentials email sent');
+    } catch (emailError) {
+      console.log('⚠️ SendGrid failed, credentials logged in console above ☝️');
+    }
+
+  } catch (error) {
+    console.error('❌ Error sending admin credentials:', error);
+  }
+};
+
 module.exports = {
   sendOtpEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendAdminCredentialsEmail
 };

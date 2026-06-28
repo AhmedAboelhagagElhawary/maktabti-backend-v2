@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema(
     academicYear: {
       type: String,
       required: [true, 'السنة الدراسية مطلوبة'],
-      enum: ['First', 'Second', 'Third', 'Fourth']
+      enum: ['First', 'Second', 'Third', 'Fourth','Admin']
     },
 
     // نوع المستخدم
@@ -80,6 +80,11 @@ const userSchema = new mongoose.Schema(
       default: true
     },
 
+    isFirstLogin: {
+      type: Boolean,
+      default: false
+    },
+    
     // التحقق من البريد الإلكتروني
     isEmailVerified: {
       type: Boolean,

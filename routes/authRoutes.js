@@ -6,23 +6,27 @@ const {
   verifyOtp,
   resendOtp,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  createAdminAccount,
+  changePassword  // ✅ تأكد موجودة
 } = require('../controllers/authController');
-const { protect } = require('../middlewares/auth');
+const { protect, authorize } = require('../middlewares/auth');
 
 const router = express.Router();
 
-// Routes للتسجيل والتحقق (بدون حماية)
+// Routes عامة
 router.post('/signup', signup);
 router.post('/verify-otp', verifyOtp);
 router.post('/resend-otp', resendOtp);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-
-// Route لتسجيل الدخول
 router.post('/login', login);
 
-// Route للحصول على بيانات المستخدم الحالي (محمية)
+// Routes محمية
 router.get('/me', protect, getMe);
+router.post('/change-password', protect, changePassword);  // ✅ صحيح
+
+// Route خاص لـ Super Admin
+router.post('/admin/create', protect, authorize('admin'), createAdminAccount);
 
 module.exports = router;

@@ -269,10 +269,29 @@ const login = async (req, res) => {
     // 6. إنشاء التوكن
     const token = generateToken(user._id, user.role);
 
-    // 7. الرد بالنجاح
+    // 7. ✅ تحقق من isFirstLogin
+    if (user.isFirstLogin && user.role === 'admin') {
+      return res.status(200).json({
+        success: true,
+        message: 'مرحباً بك! يجب عليك تغيير كلمة المرور',
+        token,
+        isFirstLogin: true, // ✅ Flag للـ Frontend
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          universityEmail: user.universityEmail,
+          role: user.role,
+          academicMajor: user.academicMajor,
+          academicYear: user.academicYear
+        }
+      });
+    }
+
+    // 8. الرد العادي (للـ Students أو Admin القدماء)
     return res.status(200).json({
       success: true,
       message: 'تم تسجيل الدخول بنجاح!',
+      isFirstLogin: false,
       token,
       user: {
         id: user._id,
@@ -434,6 +453,175 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// إنشاء حساب Admin (Super Admin only)
+const createAdminAccount = async (req, res) => {
+  try {
+    const { fullName, universityEmail, phoneNumber } = req.body;
+
+    // التحقق من المدخلات
+    if (!fullName || !universityEmail || !phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'الحقول المطلوبة: fullName, universityEmail, phoneNumber'
+      });
+    }
+
+    // تحقق من أن البريد ما مسجل قبلاً
+    const existingUser = await User.findOne({ universityEmail });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'هذا البريد مسجل بالفعل'
+      });
+    }
+
+    // إنشاء كلمة مرور عشوائية قوية
+    const generateStrongPassword = () => {
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+      const numbers = '0123456789';
+      const special = '!@#$%^&*';
+      
+      const all = uppercase + lowercase + numbers + special;
+      let password = '';
+      
+      password += uppercase[Math.floor(Math.random() * uppercase.length)];
+      password += lowercase[Math.floor(Math.random() * lowercase.length)];
+      password += numbers[Math.floor(Math.random() * numbers.length)];
+      password += special[Math.floor(Math.random() * special.length)];
+      
+      for (let i = 0; i < 8; i++) {
+        password += all[Math.floor(Math.random() * all.length)];
+      }
+      
+      return password.split('').sort(() => Math.random() - 0.5).join('');
+    };
+
+    const tempPassword = generateStrongPassword();
+    console.log(`\n🔐 Temp Password for ${universityEmail}: ${tempPassword}\n`);
+
+    // تشفير كلمة المرور
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    // إنشاء الـ Admin
+    const newAdmin = await User.create({
+      fullName,
+      universityEmail,
+      phoneNumber,
+      password: hashedPassword,
+      role: 'admin',
+      isEmailVerified: true,
+      isFirstLogin: true,
+      academicMajor: 'Admin',
+      academicYear: 'Admin'
+    });
+
+    // إرسال البريد بـ كلمة المرور المؤقتة
+    try {
+      const { sendAdminCredentialsEmail } = require('../utils/emailService');
+      await sendAdminCredentialsEmail(
+        universityEmail,
+        tempPassword,
+        fullName
+      );
+    } catch (emailError) {
+      console.warn('⚠️ Email not sent, but admin created. Check console for password.');
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'تم إنشاء حساب Admin بنجاح! تم إرسال بيانات الدخول للبريد',
+      admin: {
+        id: newAdmin._id,
+        fullName: newAdmin.fullName,
+        universityEmail: newAdmin.universityEmail,
+        role: newAdmin.role,
+        createdAt: newAdmin.createdAt,
+        note: '✅ بيانات الدخول أرسلت للبريد - Admin يمكنه تسجيل الدخول الآن'
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'خطأ في إنشاء حساب Admin',
+      error: error.message
+    });
+  }
+};
+
+
+// تغيير كلمة المرور (للـ Admin الجديد أو أي user)
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // التحقق من المدخلات
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'كلمة المرور الحالية والجديدة مطلوبة'
+      });
+    }
+
+    // تحقق من طول الكلمة الجديدة
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل'
+      });
+    }
+
+    // تحقق من عدم تشابه الكلمتين
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'كلمة المرور الجديدة يجب أن تختلف عن الحالية'
+      });
+    }
+
+    // جلب المستخدم مع كلمة المرور
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'المستخدم غير موجود'
+      });
+    }
+
+    // التحقق من كلمة المرور الحالية
+    const isCurrentPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isCurrentPasswordCorrect) {
+      return res.status(400).json({
+        success: false,
+        message: 'كلمة المرور الحالية غير صحيحة'
+      });
+    }
+
+    // تشفير الكلمة الجديدة
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // تحديث الكلمة
+    user.password = hashedNewPassword;
+    user.isFirstLogin = false; // ✅ تم تغيير الكلمة
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'تم تغيير كلمة المرور بنجاح! يمكنك الآن استخدام التطبيق'
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'خطأ في تغيير كلمة المرور',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
@@ -441,5 +629,7 @@ module.exports = {
   verifyOtp,
   resendOtp,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  createAdminAccount,
+  changePassword 
 };
