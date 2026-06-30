@@ -40,7 +40,7 @@ const uploadFile = async (fileBuffer, fileName, resourceType = 'auto') => {
 
 // دالة خاصة للـ PDF
 const uploadPDF = async (fileBuffer, fileName) => {
-  return uploadFile(fileBuffer, fileName, 'auto');
+  return uploadFile(fileBuffer, fileName, 'raw');
 };
 
 // دالة خاصة للصور

@@ -14,7 +14,7 @@ const router = express.Router();
 
 // GET routes (public)
 router.get('/', getAllProjects);
-router.get('/:id', getProjectById);
+router.get('/:id', protect, getProjectById);
 
 // POST route - create project WITH files upload
 router.post('/', protect, upload.fields([
